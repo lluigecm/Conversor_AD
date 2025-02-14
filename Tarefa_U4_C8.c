@@ -30,15 +30,37 @@
 #define SQUARE_SIZE 8   // Tamanho do quadrado  
 
 ssd1306_t ssd;          // Inicialização da estrutura do display OLED
+
 bool cor = true;
-bool border_change =true;
+bool border_change =true;   // Variável para controle da borda do display
+bool joystick_leds = true;  // Variável para controle dos LEDs do Joystick
+
 uint last_time = 0;     // Variável para debounce
+
+uint16_t joystick_center = MAX_ADC/2; // Centro do Joystick
+uint16_t x_loc = 60;// ----|
+uint16_t y_loc = 28;//     |Localização inicial do quadrado
+
+volatile uint16_t joy_x, joy_y; // Variáveis para armazenar os valores do Joystick
 
 void init_gpio_pwm(uint gpio){
     gpio_set_function(gpio, GPIO_FUNC_PWM);
     uint slice_num = pwm_gpio_to_slice_num(gpio);
     pwm_set_wrap(slice_num, WRAP);
     pwm_set_enabled(slice_num, true);
+}
+
+uint16_t adc_to_pwm(uint16_t adc_value){ // Converte o valor do ADC para o PWM considerando a dead zone do joystick
+    
+    // se estiver dentro da deadzone, retorna zero -> Não movimenta o quadrado
+    if(adc_value > joystick_center - DEADZONE && adc_value < joystick_center + DEADZONE)
+        return 0;
+    // Retorna o PWM para regiao menor que o centro -> Movimenta do quadrado para o lado esquerdo
+    if(adc_value < joystick_center - DEADZONE)
+        return (MAX_ADC - (adc_value * 2));
+    // Retorna o PWM para regiao maior que o centro -> Movimenta do quadrado para o lado direito
+    if (adc_value > joystick_center + DEADZONE)
+        return (adc_value - (joystick_center + DEADZONE)) * 2;
 }
 
 void setup(){
@@ -77,7 +99,7 @@ void setup(){
 
 void display_init_config(){
     ssd1306_fill(&ssd, !cor); // Limpa o display---------------------------------------|
-    ssd1306_rect(&ssd, 0, 0, 128, 64, cor, !cor); // Desenha um retângulo              |
+    ssd1306_rect(&ssd, 0, 0, WIDTH-1, HEIGHT-1, cor, false); //                        |
     ssd1306_draw_string(&ssd, "EMBARCATECH", 20, 10);//                                |
     ssd1306_draw_string(&ssd, "Tarefa", 20, 25);//                                     |    Configuração inicial do display
     ssd1306_draw_string(&ssd, "Capitulo 8", 20, 40);//                                 |
@@ -85,19 +107,13 @@ void display_init_config(){
 }
 
 void update_border(){
-    if(!border_change){
-        ssd1306_hline(&ssd, 3, 123, 3, !cor); // Desenha uma linha horizontal
-        ssd1306_hline(&ssd, 3, 123, 61, !cor); // Desenha uma linha horizontal
-        ssd1306_vline(&ssd, 3, 3, 61, !cor); // Desenha uma linha vertical
-        ssd1306_vline(&ssd, 123, 3, 61, !cor); // Desenha uma linha vertical
+    if(border_change){
+        ssd1306_rect(&ssd, 0, 0, WIDTH-1, HEIGHT-1, !cor, false); // Limpa a borda do display
     }else{
-        ssd1306_hline(&ssd, 3, 123, 3, cor); // Desenha uma linha horizontal
-        ssd1306_hline(&ssd, 3, 123, 61, cor); // Desenha uma linha horizontal
-        ssd1306_vline(&ssd, 3, 3, 61, cor); // Desenha uma linha vertical
-        ssd1306_vline(&ssd, 123, 3, 61, cor); // Desenha uma linha vertical
+        ssd1306_rect(&ssd, 0, 0, WIDTH-1, HEIGHT-1, cor, false); // Desenha a borda do display
     }
+    cor = !cor;
     ssd1306_send_data(&ssd); // Envia os dados para o display
-    border_change = !border_change;
 }
 
 bool debounce(){
@@ -116,8 +132,14 @@ void buttons_handler(uint gpio, uint32_t events){
             update_border(); // Atualiza a borda do display
         }
         if(gpio == BUTTON_A){
-            gpio_put(BLUE_LED, !gpio_get(BLUE_LED)); // Inverte o estado do LED azul
-            gpio_put(RED_LED, !gpio_get(RED_LED)); // Inverte o estado do LED vermelho
+            if(joystick_leds){
+                pwm_set_gpio_level(RED_LED, adc_to_pwm(joy_x));
+                pwm_set_gpio_level(BLUE_LED, adc_to_pwm(joy_y));
+            }else{
+                pwm_set_gpio_level(RED_LED, 0);
+                pwm_set_gpio_level(BLUE_LED, 0); 
+            }
+            joystick_leds = !joystick_leds;
         }
     }
 }
@@ -134,6 +156,12 @@ int main()
     gpio_set_irq_enabled_with_callback(BUTTON_A, GPIO_IRQ_EDGE_FALL, true, &buttons_handler); // Habilita a interrupção no botão A
 
     while (true) {
+        adc_select_input(0);
+        joy_y = adc_read();
+        adc_select_input(1);
+        joy_x = adc_read();
 
+
+        sleep_ms(50); // pausa entre iterações
     }
 }
