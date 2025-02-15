@@ -4,6 +4,7 @@
 #include "hardware/pwm.h"
 #include "hardware/i2c.h"
 #include "inc/ssd1306.h"
+#include "inc/font.h"
 
 // Definições dos LEDs e Botões
 #define RED_LED 13
@@ -40,7 +41,8 @@ uint last_time = 0;     // Variável para debounce
 uint16_t joystick_center = MAX_ADC/2; // Centro do Joystick
 
 uint16_t x_loc = 60;// ----|
-uint16_t y_loc = 28;//     |Localização inicial do quadrado
+//                         |Localização inicial do quadrado
+uint16_t y_loc = 28;// ----|
 
 volatile uint16_t joy_x, joy_y; // Variáveis para armazenar os valores do Joystick
 
@@ -85,7 +87,7 @@ void setup(){
     adc_gpio_init(JOYSTICK_Y);//                         |
 //-------------------------------------------------------|
 
-    i2c_init(I2C_PORT, 400*1000); // Inicializa o barramento I2C
+    i2c_init(I2C_PORT, 400*5000); // Inicializa o barramento I2C
     gpio_set_function(I2C_SDA, GPIO_FUNC_I2C); // Define os pinos SDA e SCL
     gpio_set_function(I2C_SCL, GPIO_FUNC_I2C);
     gpio_pull_up(I2C_SDA); // Habilita os pull-ups
@@ -99,12 +101,9 @@ void setup(){
 }
 
 void display_init_config(){
-    ssd1306_fill(&ssd, !cor); // Limpa o display---------------------------------------|
-    ssd1306_rect(&ssd, 0, 0, WIDTH-1, HEIGHT-1, cor, false); //                        |
-    ssd1306_draw_string(&ssd, "EMBARCATECH", 20, 10);//                                |
-    ssd1306_draw_string(&ssd, "Tarefa", 20, 25);//                                     |    Configuração inicial do display
-    ssd1306_draw_string(&ssd, "Capitulo 8", 20, 40);//                                 |
-    ssd1306_send_data(&ssd); // Envia os dados para o display--------------------------|
+    ssd1306_fill(&ssd, false); // Limpa o display
+    ssd1306_draw_bitmap(&ssd, bitmap_logo); // Desenha o logo
+    ssd1306_send_data(&ssd); // Envia os dados para o display
 }
 
 void update_border(){
@@ -175,7 +174,7 @@ int main()
     setup();
     
     display_init_config();
-    sleep_ms(2000); // Pausa de 2s
+    sleep_ms(5000); // Pausa de 2s
     ssd1306_fill(&ssd, !cor); // Limpa o display
     ssd1306_rect(&ssd, 0, 0, WIDTH-1, HEIGHT-1, cor, false); // Desenha a borda do display
     ssd1306_send_data(&ssd); // Envia os dados para o display
