@@ -14,7 +14,7 @@ Alguns botões das placas possuem algumas funcionalidades:
 - **Display**: Exibe um quadrado para representar o movimento do joystick 📟.
 - **Botão A**: Alterna o estado do **PWM** dos **LEDs Vermelho** e **Azul**.
 
-[**Vídeo de Demonstração** 🎥](https://youtube.com/shorts/w3HyJ3UWnhE?feature=share "target= _blank")
+[**Vídeo de Demonstração** 🎥](https://youtube.com/shorts/w3HyJ3UWnhE?feature=share)
 
 ---
 
